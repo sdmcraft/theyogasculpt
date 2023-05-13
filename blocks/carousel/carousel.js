@@ -1,125 +1,62 @@
-function calculateScrollbarWidth() {
-    document.documentElement.style.setProperty(
-      '--scrollbar-width',
-      `${window.innerWidth - document.documentElement.clientWidth}px`
-    );
+let slideIndex = 0;
+
+function template(items) {
+  const tl = `
+    ${items.map((item) => {
+    const tl = `<div class="carousel-slide">
+        ${item.picture.outerHTML}
+        ${item.content.outerHTML}
+      </div>`;
+    return tl;
+  }).join('')}
+    <a class="carousel-prev" href="#">&#10094;</a>
+    <a class="carousel-next" href="#">&#10095;</a>
+  `;
+  return tl;
+}
+
+function changeSlide(n, block) {
+  showSlide((slideIndex += n), block);
+}
+
+function showSlide(n, block) {
+  let slides = block.querySelectorAll(".carousel-slide");
+  if (n == slides.length) {
+    slideIndex = 0;
   }
-
-  function selectButton(block, button, row, buttons) {
-    const index = [...buttons].indexOf(button);
-    const arrows = block.parentNode.querySelector('.carousel-controls');
-
-    block.scrollTo({ top: 0, left: row.offsetLeft - row.parentNode.offsetLeft, behavior: 'smooth' });
-    buttons.forEach((r) => r.classList.remove('selected'));
-    button.classList.add('selected');
-
-    // enable arrows
-    [...arrows.children].forEach((arrow) => arrow.classList.remove('disabled'));
-
-    // disable arrows
-    if (index === 0) {
-      arrows.querySelector('.prev').classList.add('disabled');
-    } else if (index >= buttons.length - 1) {
-      arrows.querySelector('.next').classList.add('disabled');
-    }
+  if (n < 0) {
+    slideIndex = slides.length - 1;
   }
+  for (let i = 0; i < slides.length; i++) {
+    slides[i].style.display = "none";
+  }
+  console.log(slideIndex);
+  slides[slideIndex].style.display = "block";
+}
 
-  function getVisibleSlide(event) {
-    const { target } = event;
-    const buttons = target.nextElementSibling.querySelectorAll('button');
-    const slides = target.querySelectorAll(':scope > div');
-    const leftPosition = target.scrollLeft;
-    let leftPadding = 0;
 
-    slides.forEach((slide, key) => {
-      const offset = slide.offsetLeft;
-
-      // set first offset (extra padding?)
-      if (key === 0) leftPadding = offset;
-
-      if (offset - leftPadding === leftPosition) {
-        // trigger default functionality
-        selectButton(target, buttons[key], slide, buttons);
-      }
+function parse(block) {
+  const items = [];
+  block.querySelectorAll(":scope > div").forEach((item) => {
+    items.push({
+      picture: item.querySelector("div:first-of-type > picture"),
+      content: item.querySelector("div:last-of-type"),
     });
-  }
+  });
+  return items;
+}
 
-  export default function decorate(block) {
-    const buttons = document.createElement('div');
-    const autoPlayList = [];
-    let carouselInterval = null;
-
-    // dots
-    buttons.className = 'carousel-buttons';
-    [...block.children].forEach((row, i) => {
-      // set classes
-      [...row.children].forEach((child) => {
-        if (child.querySelector('picture')) {
-          child.classList.add('carousel-image');
-        } else {
-          child.classList.add('carousel-text');
-        }
-      });
-
-      // move icon to parent's parent
-      const icon = row.querySelector('span.icon');
-      if (icon) icon.parentNode.parentNode.prepend(icon);
-
-      /* buttons */
-      const button = document.createElement('button');
-      if (!i) button.classList.add('selected');
-      button.addEventListener('click', () => {
-        window.clearInterval(carouselInterval);
-        selectButton(block, button, row, [...buttons.children]);
-      });
-      buttons.append(button);
-      autoPlayList.push({ row, button });
-    });
-    block.parentElement.append(buttons);
-
-    // arrows
-    const arrows = document.createElement('div');
-    const prev = document.createElement('button');
-    const next = document.createElement('button');
-
-    arrows.classList.add('carousel-controls');
-    prev.classList.add('prev', 'disabled');
-    next.classList.add('next');
-    arrows.append(prev);
-    arrows.append(next);
-    [...arrows.children].forEach((arrow) => arrow.addEventListener('click', ({ target }) => {
-      const active = buttons.querySelector('.selected');
-      const index = [...buttons.children].indexOf(active);
-
-      if (target.classList.contains('disabled')) return;
-
-      if (target.classList.contains('prev')) {
-        [...buttons.children].at(index - 1).click();
-      } else if (target.classList.contains('next')) {
-        [...buttons.children].at(index + 1).click();
-      }
-    }));
-    block.parentElement.append(arrows);
-
-    // attach scroll event
-    block.addEventListener('scroll', getVisibleSlide);
-
-    calculateScrollbarWidth();
-    window.addEventListener('resize', calculateScrollbarWidth, false);
-
-    // skip for new styles
-    if (block.classList.contains('style-1')
-      || block.classList.contains('style-2')
-      || block.classList.contains('style-3')) return;
-
-    carouselInterval = window.setInterval(() => {
-      autoPlayList.some((b, i) => {
-        const isSelected = b.button.classList.contains('selected');
-        if (isSelected) {
-          const nextB = (i + 1 >= autoPlayList.length) ? autoPlayList[0] : autoPlayList[i + 1];
-          selectButton(block, nextB.button, nextB.row, [b.button]);
-        }
-        return isSelected;
-      });
-    }, 5000);
-  }
+export default function decorate(block) {
+  block.innerHTML = template(parse(block));
+  showSlide(slideIndex, block);
+  block.querySelector(".carousel-prev").addEventListener("click", () => {
+    changeSlide(-1, block);
+  });
+  block.querySelector(".carousel-next").addEventListener("click", () => {
+    changeSlide(1, block);
+  });
+  // Change slide every 5 seconds
+  setInterval(function () {
+    changeSlide(1, block);
+  }, 4000);
+}

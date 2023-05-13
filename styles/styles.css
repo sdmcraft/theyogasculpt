@@ -215,21 +215,22 @@ main img {
   width: 100%;
 }
 
-main .section {
+main .section:not(.wide) {
   padding: 64px 16px;
 }
 
 @media (min-width: 600px) {
-  main .section {
+  main .section:not(.wide) {
     padding: 64px 32px;
   }
 }
 
 @media (min-width: 900px) {
-  .section > div {
+  .section:not(.wide) > div {
     max-width: 1200px;
     margin: auto;
   }
+
 }
 
 /* progressive section appearance */
